@@ -10,6 +10,7 @@ import org.opencv.core.Scalar;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
+import org.opencv.videoio.VideoCapture;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -22,7 +23,7 @@ import java.io.IOException;
 public class FaceDetectionImage
 {
     private final String inputFileName = "C:\\Users\\ASUS\\Downloads\\facedetection_input.jpg";
-    private final String outputFileName = "C:\\Users\\ASUS\\Downloads\\facedetection_output.jpg";
+    private final String outputFileName = "C:\\Users\\ASUS\\Downloads\\cam_image_output.jpg";
     private final String cascadeClassifierXMLFileName = "src/main/resources/face.xml";
 
     private final int screenWidth = 1200;
@@ -33,7 +34,7 @@ public class FaceDetectionImage
     public void showWindow() throws IOException
     {
         // считываем исходное изображение
-        BufferedImage image = ImageIO.read(new File(inputFileName));
+        BufferedImage image = convertMatrixToBufferedImage(captureFrame());
 
         // создаем окно
         JFrame frame = new JFrame();
@@ -77,11 +78,12 @@ public class FaceDetectionImage
 
     public BufferedImage start() throws IOException
     {
-        // загружаем библиотеку OpenCV core
-        System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
+//        // загружаем библиотеку OpenCV core
+//        System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
 
         // считываем изображение из файла и сохраняем его в матрицу
-        Mat imageMatrix = Imgcodecs.imread(inputFileName);
+//        Mat imageMatrix = Imgcodecs.imread(inputFileName);
+        Mat imageMatrix = captureFrame();   // получаем изображение с камеры
 
         // инициализируем CascadeClassifier
         CascadeClassifier classifier = new CascadeClassifier(cascadeClassifierXMLFileName);
@@ -94,17 +96,44 @@ public class FaceDetectionImage
         drawDetectedRects(imageMatrix, faceDetections.toArray());
 
         // создаем изображение из матрицы
-        BufferedImage image = new BufferedImage(imageMatrix.width(), imageMatrix.height(), BufferedImage.TYPE_3BYTE_BGR);
-        byte[] data = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
-        imageMatrix.get(0, 0, data);
+        BufferedImage image = convertMatrixToBufferedImage(imageMatrix);
 
         // сохраняем изображение в файл
         Imgcodecs.imwrite(outputFileName, imageMatrix);
-//        ImageIO.write(image, "jpg", new File(outputFileName));
 
         System.out.println("Image Processed");
 
         return image;
+    }
+
+    public BufferedImage convertMatrixToBufferedImage(Mat imageMatrix)      // создаем изображение из матрицы
+    {
+        BufferedImage image = new BufferedImage(imageMatrix.width(), imageMatrix.height(), BufferedImage.TYPE_3BYTE_BGR);
+        byte[] data = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
+        imageMatrix.get(0, 0, data);
+
+        return  image;
+    }
+
+    public Mat captureFrame()
+    {
+        // создаем камеру, номер камеры - 0 (camera:: 0)
+        VideoCapture capture = new VideoCapture(0);
+
+        // пробуем сделать кадр, тем самым инициализировав камеру
+        Mat matrix = new Mat();
+        capture.read(matrix);
+
+        // смотрим, чтобы камера работала
+        if(!capture.isOpened())
+        {
+            System.out.println("camera not detected");
+        }
+        else
+        {
+            System.out.println("Camera detected ");
+        }
+        return matrix;
     }
 
     public void drawDetectedRects(Mat image, Rect[] rects)
@@ -123,6 +152,10 @@ public class FaceDetectionImage
 
     public static void main (String[] args) throws IOException
     {
+        // загружаем библиотеку OpenCV core
+        System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
+
+        // запускаем процесс
         FaceDetectionImage faceDetectionImage = new FaceDetectionImage();
         faceDetectionImage.showWindow();
     }
